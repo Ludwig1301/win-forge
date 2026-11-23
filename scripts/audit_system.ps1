@@ -16,7 +16,17 @@ Write-Output "Uptime: $([math]::Round($uptime.TotalHours, 1)) hours (LastBoot: $
 Write-Output "RAM: $usedRam / $totalRam GB ($usedPct%)"
 Write-Output "Power Plan: $(powercfg /getactivescheme)"
 
-Write-Output "`n=== DISPLAY & GPU ROUTING ==="
+Write-Output "`n=== CPU & PERFORMANCE STATE ==="
+Get-CimInstance Win32_Processor | Select-Object Name, LoadPercentage, CurrentClockSpeed, MaxClockSpeed, NumberOfCores, NumberOfLogicalProcessors | Format-List
+$hags = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name HwSchMode).HwSchMode
+$gm   = (Get-ItemProperty "HKCU:\Software\Microsoft\GameBar" -Name AutoGameModeEnabled).AutoGameModeEnabled
+$hvci = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name Enabled).Enabled
+$devM = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name AllowDevelopmentWithoutDevLicense).AllowDevelopmentWithoutDevLicense
+Write-Output "HAGS (HwSchMode): $(if ($null -eq $hags) {'Not Set'} else {$hags}) | GameMode: $(if ($null -eq $gm) {'Default'} else {$gm}) | HVCI: $(if ($null -eq $hvci) {'Not Set'} else {$hvci}) | DevMode: $(if ($null -eq $devM) {'0'} else {$devM})"
+Write-Output "NTFS Trim/LastAccess: $((fsutil behavior query DisableDeleteNotify) -join '; ') | $(fsutil behavior query disablelastaccess)"
+Get-PhysicalDisk | Select-Object FriendlyName, MediaType, HealthStatus, OperationalStatus, @{N='SizeGB';E={[math]::Round($_.Size/1GB,1)}} | Format-Table -AutoSize
+
+Write-Output "=== DISPLAY & GPU ROUTING ==="
 Get-CimInstance Win32_VideoController | Select-Object Name, VideoModeDescription, CurrentRefreshRate, DriverVersion | Format-Table -AutoSize
 
 Write-Output "=== WIDGETS / FEEDS POLICY CHECK ==="
@@ -37,13 +47,28 @@ foreach ($prop in @("Desktop", "Personal", "My Pictures")) {
 }
 
 Write-Output "`n=== TOP RUNNING APPS (BY RAM) ==="
+$p1 = Get-Process | Select-Object Id, ProcessName, CPU
+Start-Sleep -Seconds 2
+$p2 = Get-Process | Select-Object Id, ProcessName, CPU
+$cpuMap = @{}
+foreach ($p in $p2) {
+    $prev = $p1 | Where-Object { $_.Id -eq $p.Id }
+    if ($prev -and $null -ne $p.CPU -and $null -ne $prev.CPU) {
+        $delta = ($p.CPU - $prev.CPU) / 2.0 / [Environment]::ProcessorCount * 100.0
+        if (-not $cpuMap.ContainsKey($p.ProcessName)) { $cpuMap[$p.ProcessName] = 0.0 }
+        $cpuMap[$p.ProcessName] += $delta
+    }
+}
 $procs = Get-CimInstance Win32_Process
 Write-Output "Total Processes: $($procs.Count)"
 $procs | Group-Object Name | ForEach-Object {
+    $base = [IO.Path]::GetFileNameWithoutExtension($_.Name)
+    $cpuPct = if ($cpuMap.ContainsKey($base)) { [math]::Round($cpuMap[$base], 1) } else { 0 }
     [PSCustomObject]@{
-        Name  = $_.Name
-        Count = $_.Count
-        RamMB = [math]::Round((($_.Group | Measure-Object WorkingSetSize -Sum).Sum) / 1MB, 1)
+        Name   = $_.Name
+        Count  = $_.Count
+        RamMB  = [math]::Round((($_.Group | Measure-Object WorkingSetSize -Sum).Sum) / 1MB, 1)
+        CpuPct = $cpuPct
     }
 } | Sort-Object RamMB -Descending | Select-Object -First 20 | Format-Table -AutoSize
 
