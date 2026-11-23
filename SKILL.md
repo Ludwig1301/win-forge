@@ -13,7 +13,7 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 
 ## Core Execution Rules (Interactive & One-by-One)
 
-1. **Never modify anything during initial discovery; always baseline disk and performance states first.** Before proposing or executing any changes, run both [audit_system.ps1](./scripts/audit_system.ps1) and [audit_disk.ps1](./scripts/audit_disk.ps1) read-only to record current disk space, CPU/RAM load, power/performance flags, GPU routing, and startup state.
+1. **Never modify anything during initial discovery; always baseline disk, performance, and driver states first.** Before proposing or executing any changes, run [audit_system.ps1](./scripts/audit_system.ps1), [audit_disk.ps1](./scripts/audit_disk.ps1), and [audit_drivers.ps1](./scripts/audit_drivers.ps1) read-only to record current disk space, CPU/RAM load, power/performance flags, GPU routing, startup state, and pending driver updates.
 2. **Present concise findings first.** Group results clearly (sizes in GB/MB, RAM/process counts, startup vectors, driver status) and offer numbered options.
 3. **Wait for user selection.** Let the user choose which numbered items to run.
 4. **Execute one by one with verification.** Run **one approved task at a time**, verify its result (exit code, free space delta, registry/service/process state), report the outcome briefly, then proceed to the next item.
@@ -23,11 +23,11 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 
 ## Phase 1: Read-Only Discovery
 
-**Mandatory Pre-Flight Baseline:** Always run **both** the performance/system audit and the disk audit before starting any work (and add the driver audit when drivers, GPU, or BIOS are in scope):
+**Mandatory Pre-Flight Baseline:** Always run **all three** read-only audits before starting any work so disk, performance, and driver-update baselines are captured upfront:
 
 - **System, Performance State, Processes, Startups & Known Folders:** [audit_system.ps1](./scripts/audit_system.ps1)
 - **Disk Space, Pagefile & Caches (Junction-Safe):** [audit_disk.ps1](./scripts/audit_disk.ps1)
-- **Installed Drivers & Windows Update Drivers:** [audit_drivers.ps1](./scripts/audit_drivers.ps1)
+- **Installed Drivers, BIOS Age, Device Errors & Windows Update Drivers:** [audit_drivers.ps1](./scripts/audit_drivers.ps1)
 
 Before recommending any action, verify the OS version (`Build >= 22000` = Windows 11, `< 22000` = Windows 10) and flag any safety risks (e.g., OneDrive Known Folder Move active, or Windows Update actively locking `SoftwareDistribution\Download`). Note that running Phase 1 elevated (`IsAdmin: True`) also reveals system-wide Scheduled Tasks (e.g. `\Intel\*`, `\GoogleSystem\*`) and multi-SID `$Recycle.Bin` usage hidden from non-admin scans.
 

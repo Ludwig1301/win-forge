@@ -2,7 +2,20 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 Write-Output "=== HARDWARE & BIOS ==="
 Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model | Format-Table -AutoSize
-Get-CimInstance Win32_BIOS | Select-Object SMBIOSBIOSVersion, @{N='ReleaseDate';E={if($_.ReleaseDate){$_.ReleaseDate.ToString('yyyy-MM-dd')}}} | Format-Table -AutoSize
+$bios = Get-CimInstance Win32_BIOS
+$bios | Select-Object SMBIOSBIOSVersion, @{N='ReleaseDate';E={if($_.ReleaseDate){$_.ReleaseDate.ToString('yyyy-MM-dd')}}} | Format-Table -AutoSize
+if ($bios.ReleaseDate -and $bios.ReleaseDate -lt (Get-Date).AddDays(-365)) {
+    $ageDays = [int]((Get-Date) - $bios.ReleaseDate).TotalDays
+    Write-Output "[ADVISORY] BIOS is $ageDays days old ($($bios.ReleaseDate.ToString('yyyy-MM-dd'))); check vendor support for newer microcode/BIOS updates."
+}
+
+Write-Output "`n=== DEVICES WITH DRIVER ERRORS ==="
+$errDevs = Get-CimInstance Win32_PnPEntity | Where-Object { $_.ConfigManagerErrorCode -ne 0 }
+if ($errDevs) {
+    $errDevs | Select-Object Name, PNPClass, ConfigManagerErrorCode | Format-Table -AutoSize
+} else {
+    Write-Output "None (all PnP devices report ConfigManagerErrorCode = 0)"
+}
 
 Write-Output "=== KEY SIGNED DRIVERS ==="
 Get-CimInstance Win32_PnPSignedDriver | Where-Object {
