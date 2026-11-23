@@ -57,7 +57,7 @@ Use the exact verified commands and OS-specific branches in [playbooks.md](./ref
 
 4. **Taskbar & UI Cleanup (Win 10 vs. Win 11)**
    - **Windows 10** (`Build < 22000`): Set `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds\EnableFeeds = 0` (News and interests / weather widget).
-   - **Windows 11** (`Build >= 22000`): Set `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (Widgets).
+   - **Windows 11** (`Build >= 22000`): Set `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (Widgets). On newer Win 11 builds where `Dsh` / `TaskbarDa` registry writes throw `UnauthorizedAccessException` even as Admin, remove `Microsoft.WidgetsPlatformRuntime`, `Microsoft.StartExperiencesApp`, and `MicrosoftWindows.Client.WebExperience` via `Remove-AppxPackage` (if approved) or toggle Widgets off in Settings.
    - Restart `explorer.exe` to apply immediately.
 
 5. **Dev, Gaming, Power & Locale Checks**

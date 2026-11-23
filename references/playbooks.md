@@ -131,6 +131,13 @@ Start-Sleep -Seconds 2
 if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe }
 ```
 
+> **Windows 11 Build 26300+ Fallback:** If writing `Dsh\AllowNewsAndInterests` or `TaskbarDa` throws `UnauthorizedAccessException` (`Attempted to perform an unauthorized operation`) even when elevated, remove the Widgets/Feeds packages instead (with user approval):
+> ```powershell
+> foreach ($pkg in @("Microsoft.WidgetsPlatformRuntime", "Microsoft.StartExperiencesApp", "MicrosoftWindows.Client.WebExperience")) {
+>     Get-AppxPackage $pkg | Remove-AppxPackage -ErrorAction SilentlyContinue
+> }
+> ```
+
 ---
 
 ## 6. Power, Dev/Gaming & Locale Checks
