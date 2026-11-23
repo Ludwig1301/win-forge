@@ -16,6 +16,18 @@ Write-Output "Uptime: $([math]::Round($uptime.TotalHours, 1)) hours (LastBoot: $
 Write-Output "RAM: $usedRam / $totalRam GB ($usedPct%)"
 Write-Output "Power Plan: $(powercfg /getactivescheme)"
 
+Write-Output "`n=== DISPLAY & GPU ROUTING ==="
+Get-CimInstance Win32_VideoController | Select-Object Name, VideoModeDescription, CurrentRefreshRate, DriverVersion | Format-Table -AutoSize
+
+Write-Output "=== WIDGETS / FEEDS POLICY CHECK ==="
+if ($build -ge 22000) {
+    $dsh = (Get-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name AllowNewsAndInterests).AllowNewsAndInterests
+    Write-Output "AllowNewsAndInterests (Win11 Widgets): $(if ($null -eq $dsh) { 'Not Set (Enabled)' } else { $dsh })"
+} else {
+    $feeds = (Get-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name EnableFeeds).EnableFeeds
+    Write-Output "EnableFeeds (Win10 News): $(if ($null -eq $feeds) { 'Not Set (Enabled)' } else { $feeds })"
+}
+
 Write-Output "`n=== KNOWN FOLDERS (ONEDRIVE SAFETY CHECK) ==="
 $usf = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
 foreach ($prop in @("Desktop", "Personal", "My Pictures")) {
@@ -36,10 +48,39 @@ $procs | Group-Object Name | ForEach-Object {
 } | Sort-Object RamMB -Descending | Select-Object -First 20 | Format-Table -AutoSize
 
 Write-Output "=== STARTUP LAYER 1: REGISTRY RUN ==="
-Write-Output "-- HKCU Run --"
-Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" | Select-Object * -ExcludeProperty PS* | Format-List
-Write-Output "-- HKLM Run --"
-Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" | Select-Object * -ExcludeProperty PS* | Format-List
+function Get-StartupApprovedMap($regPath) {
+    $map = @{}
+    if (Test-Path $regPath) {
+        $props = Get-ItemProperty $regPath
+        foreach ($p in $props.PSObject.Properties) {
+            if ($p.Name -notlike 'PS*' -and $p.Value -is [byte[]] -and $p.Value.Length -ge 1) {
+                # First byte: 2 or 6 = Enabled, 3 or odd = Disabled in Task Manager
+                $map[$p.Name] = if (($p.Value[0] % 2) -eq 1) { "Disabled in TaskMgr" } else { "Enabled" }
+            }
+        }
+    }
+    return $map
+}
+$hkcuApproved = Get-StartupApprovedMap "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
+$hklmApproved = Get-StartupApprovedMap "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
+$wowApproved  = Get-StartupApprovedMap "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32"
+
+function Show-RunKey($label, $regPath, $approvedMap) {
+    Write-Output "-- $label --"
+    $item = Get-ItemProperty $regPath
+    if ($item) {
+        foreach ($p in $item.PSObject.Properties) {
+            if ($p.Name -notlike 'PS*') {
+                $st = if ($approvedMap.ContainsKey($p.Name)) { $approvedMap[$p.Name] } else { "Enabled" }
+                Write-Output "$($p.Name) [$st] : $($p.Value)"
+            }
+        }
+    }
+}
+
+Show-RunKey "HKCU Run" "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" $hkcuApproved
+Show-RunKey "HKLM Run" "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" $hklmApproved
+Show-RunKey "HKLM WOW6432Node Run" "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run" $wowApproved
 
 Write-Output "=== STARTUP LAYER 2: STARTUP FOLDERS ==="
 Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup" | Select-Object Name
@@ -54,11 +95,26 @@ Get-ChildItem "HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\
     }
 }
 
-Write-Output "`n=== STARTUP LAYER 4: NON-WINDOWS SCHEDULED TASKS (Enabled/Running) ==="
-Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "\Microsoft\Windows\*" -and $_.State -ne 'Disabled' } |
-    Select-Object TaskName, TaskPath, State | Format-Table -AutoSize
+Write-Output "`n=== STARTUP LAYER 4: NON-WINDOWS & TELEMETRY SCHEDULED TASKS (Enabled/Running) ==="
+Get-ScheduledTask | Where-Object {
+    $_.State -ne 'Disabled' -and (
+        $_.TaskPath -notlike "\Microsoft\Windows\*" -or
+        $_.TaskName -match 'Compatibility Appraiser|Consolidator|UsbCeip|SustainabilityTelemetry|MapsToastTask|ShowFeedbackToast'
+    )
+} | Select-Object TaskName, TaskPath, State | Format-Table -AutoSize
 
 Write-Output "=== STARTUP LAYER 5: 3RD-PARTY AUTOMATIC SERVICES ==="
 Get-CimInstance Win32_Service -Filter "StartMode='Auto'" |
     Where-Object { $_.PathName -and -not $_.PathName.Trim('"').ToLowerInvariant().StartsWith('c:\windows\') } |
-    Select-Object Name, DisplayName, State | Format-Table -AutoSize
+    ForEach-Object {
+        $exe = $_.PathName.Trim()
+        if ($exe.StartsWith('"')) {
+            $exe = ($exe -split '"')[1]
+        } else {
+            $exe = ($exe -split '\s+(?=-|/)')[0]
+            if (-not (Test-Path $exe) -and $exe -match '^(.+?\.exe)\b') { $exe = $Matches[1] }
+        }
+        $missing = if ($exe -and -not (Test-Path $exe)) { "YES (Orphaned)" } else { "No" }
+        $msix    = if ($_.PathName -match '\\WindowsApps\\') { "Yes" } else { "No" }
+        [PSCustomObject]@{ Name = $_.Name; State = $_.State; MissingBinary = $missing; MsixProtected = $msix; DisplayName = $_.DisplayName }
+    } | Format-Table -AutoSize -Wrap

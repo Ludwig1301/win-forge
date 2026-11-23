@@ -5,8 +5,10 @@
 When `IsAdmin` is `False`, write an `.ps1` script to a scratch/temp path with `Start-Transcript`, run it elevated, then inspect the transcript:
 
 ```powershell
-Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs -Wait -WindowStyle Hidden
+Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs -Wait
 ```
+
+> **Fallback for non-elevatable / restricted shells:** If `Start-Process -Verb RunAs` throws `The request is not supported` (`InvalidOperationException`) or UAC cannot be spawned from the host runner, do **not** attempt any UAC bypass. Guard the generated `.ps1` script with an `IsAdmin` check at the top, save it, and give the user the exact command to paste into **Terminal (Admin)** (`Win + X → Terminal (Admin)`).
 
 ---
 
@@ -105,7 +107,7 @@ cmd /c rmdir "C:\ShadowTemp_OneDrive"
   Set-ItemProperty -Path $edgePol -Name "StartupBoostEnabled" -Value 0 -Type DWord
   Set-ItemProperty -Path $edgePol -Name "BackgroundModeEnabled" -Value 0 -Type DWord
   ```
-- **Services (Elevated):** Use `Set-Service -Name "<name>" -StartupType Manual` (use `Disabled` for services that self-revert to `Automatic`, e.g., `PCManager Service Store`).
+- **Services (Elevated):** Use `Set-Service -Name "<name>" -StartupType Manual` (use `Disabled` for services that self-revert to `Automatic`, e.g., `PCManager Service Store`). Note that MSIX/Store-packaged services whose `PathName` is inside `C:\Program Files\WindowsApps\` (e.g., `IntelGraphicsSoftwareService`, `SamsungQuickShareService`) throw `Access is denied` (`ERROR 5`) on `Set-Service` / `sc config` even as Admin—uninstall the parent Store `AppxPackage` if unwanted.
 
 ---
 

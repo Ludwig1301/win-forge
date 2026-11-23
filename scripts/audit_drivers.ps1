@@ -2,7 +2,7 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 Write-Output "=== HARDWARE & BIOS ==="
 Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model | Format-Table -AutoSize
-Get-CimInstance Win32_BIOS | Select-Object SMBIOSBIOSVersion, ReleaseDate | Format-Table -AutoSize
+Get-CimInstance Win32_BIOS | Select-Object SMBIOSBIOSVersion, @{N='ReleaseDate';E={if($_.ReleaseDate){$_.ReleaseDate.ToString('yyyy-MM-dd')}}} | Format-Table -AutoSize
 
 Write-Output "=== KEY SIGNED DRIVERS ==="
 Get-CimInstance Win32_PnPSignedDriver | Where-Object {
@@ -10,7 +10,7 @@ Get-CimInstance Win32_PnPSignedDriver | Where-Object {
     $_.DriverVersion -and
     $_.DeviceName -notmatch '^WAN Miniport|^Microsoft Kernel|^Microsoft Wi-Fi|^Bluetooth Device \(Personal|^Generic '
 } | Select-Object DeviceClass, DeviceName, DriverVersion, @{N='Date';E={if($_.DriverDate){$_.DriverDate.ToString('yyyy-MM-dd')}}} |
-    Sort-Object DeviceClass, DeviceName | Format-Table -AutoSize
+    Sort-Object DeviceClass, DeviceName, DriverVersion -Unique | Format-Table -AutoSize
 
 Write-Output "=== WINDOWS UPDATE PENDING DRIVERS ==="
 try {

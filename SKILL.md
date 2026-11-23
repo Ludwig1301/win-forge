@@ -17,7 +17,7 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 2. **Present concise findings first.** Group results clearly (sizes in GB/MB, RAM/process counts, startup vectors, driver status) and offer numbered options.
 3. **Wait for user selection.** Let the user choose which numbered items to run.
 4. **Execute one by one with verification.** Run **one approved task at a time**, verify its result (exit code, free space delta, registry/service/process state), report the outcome briefly, then proceed to the next item.
-5. **Handle elevation cleanly.** Check if the shell is elevated (`IsAdmin`). Run user-scoped actions directly; wrap `HKLM`, `Service`, `cleanmgr`, `powercfg`, or driver installs in an elevated script (`Start-Process powershell -Verb RunAs -Wait`) that logs to a transcript so output is captured.
+5. **Handle elevation cleanly.** Check if the shell is elevated (`IsAdmin`). Run user-scoped actions directly; wrap `HKLM`, `Service`, `cleanmgr`, `powercfg`, or driver installs in an elevated script (`Start-Process powershell -Verb RunAs -Wait`) that logs to a transcript so output is captured. If `-Verb RunAs` fails or is unsupported in the current environment (`InvalidOperationException` / non-interactive runner), do not attempt to bypass elevation—save a self-contained `.ps1` script to scratch/temp, verify `IsAdmin` inside it, and give the user the exact one-line command to run from an Administrator PowerShell (`Win + X → Terminal (Admin)`).
 
 ---
 
@@ -29,7 +29,7 @@ Run the relevant read-only audit script(s) based on the user's goal:
 - **Disk Space & Caches (Junction-Safe):** [audit_disk.ps1](./scripts/audit_disk.ps1)
 - **Installed Drivers & Windows Update Drivers:** [audit_drivers.ps1](./scripts/audit_drivers.ps1)
 
-Before recommending any action, verify the OS version (`Build >= 22000` = Windows 11, `< 22000` = Windows 10) and flag any safety risks (e.g., OneDrive Known Folder Move active, or Windows Update actively locking `SoftwareDistribution\Download`).
+Before recommending any action, verify the OS version (`Build >= 22000` = Windows 11, `< 22000` = Windows 10) and flag any safety risks (e.g., OneDrive Known Folder Move active, or Windows Update actively locking `SoftwareDistribution\Download`). Note that running Phase 1 elevated (`IsAdmin: True`) also reveals system-wide Scheduled Tasks (e.g. `\Intel\*`, `\GoogleSystem\*`) and multi-SID `$Recycle.Bin` usage hidden from non-admin scans.
 
 ---
 

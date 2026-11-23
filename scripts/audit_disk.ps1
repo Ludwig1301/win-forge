@@ -34,6 +34,10 @@ $caches = @(
     @{ Name = "Windows Temp"; Path = "C:\Windows\Temp" },
     @{ Name = "Windows Update DL"; Path = "C:\Windows\SoftwareDistribution\Download" },
     @{ Name = "NuGet cache"; Path = "$env:USERPROFILE\.nuget\packages" },
+    @{ Name = "pip cache"; Path = "$env:LOCALAPPDATA\pip\cache" },
+    @{ Name = "npm cache"; Path = "$env:LOCALAPPDATA\npm-cache" },
+    @{ Name = "HuggingFace cache"; Path = "$env:USERPROFILE\.cache\huggingface\hub" },
+    @{ Name = "LM Studio updater"; Path = "$env:LOCALAPPDATA\lm-studio-updater" },
     @{ Name = "Chrome Cache"; Path = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cache" },
     @{ Name = "Edge Cache"; Path = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Cache" },
     @{ Name = "CrashDumps"; Path = "$env:LOCALAPPDATA\CrashDumps" }
@@ -54,5 +58,11 @@ if ($sdRecent) {
 $hiber = Get-Item "C:\hiberfil.sys" -Force
 if ($hiber) { Write-Output "hiberfil.sys: $([math]::Round($hiber.Length / 1GB, 2)) GB" }
 
-$rb = (New-Object -ComObject Shell.Application).NameSpace(0x0a).Items() | Measure-Object -Property Size -Sum
-Write-Output "Recycle Bin: $([math]::Round($rb.Sum / 1MB, 1)) MB ($($rb.Count) items)"
+$pf = Get-CimInstance Win32_PageFileUsage
+if ($pf -and $pf.AllocatedBaseSize -ge 8192) {
+    Write-Output "pagefile.sys: Allocated $([math]::Round($pf.AllocatedBaseSize / 1024, 2)) GB | CurrentUsage $([math]::Round($pf.CurrentUsage / 1024, 2)) GB | PeakUsage $([math]::Round($pf.PeakUsage / 1024, 2)) GB"
+}
+
+$rbItems = @((New-Object -ComObject Shell.Application).NameSpace(0x0a).Items())
+$rb = $rbItems | Measure-Object -Property Size -Sum
+Write-Output "Recycle Bin: $([math]::Round($rb.Sum / 1MB, 1)) MB ($($rbItems.Count) items)"
