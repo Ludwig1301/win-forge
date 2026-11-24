@@ -86,7 +86,9 @@ Use the exact verified commands and OS-specific branches in [playbooks.md](./ref
 
 ## Phase 4: Final Re-Scan & Iterative Tracking
 
-1. **Final Post-Action Re-Scan:** After all approved tasks finish, run [audit_system.ps1](./scripts/audit_system.ps1) and [audit_disk.ps1](./scripts/audit_disk.ps1) (plus [audit_drivers.ps1](./scripts/audit_drivers.ps1) if drivers were updated) **one last time** and summarize the before-vs-after delta (free disk space gained, RAM/process count change, remaining startups, and any reverted/protected settings).
+1. **Final Post-Action Re-Scan:** After all approved tasks finish, run [audit_system.ps1](./scripts/audit_system.ps1) and [audit_disk.ps1](./scripts/audit_disk.ps1) (plus [audit_drivers.ps1](./scripts/audit_drivers.ps1) if drivers were updated) **one last time** and summarize the before-vs-after delta using these two lightweight tables (keep cells crisp and numeric—no dates):
+   - **1. Disk Space** (`Drive` | `Before` | `Now` | `Gained`) — fixed drives only (e.g., `C: (SSD)`, `D: (HDD)`).
+   - **2. System Load** (`Metric` | `Before` | `Now` | `Change`) — rows for `Processes`, `RAM Used`, `Startup Apps (Run)` (numeric counts), `Background Bloat` (brief list → `Removed / Disabled / Manual`), and `Drivers Updated` (if any).
 2. **Iterative-Process Notice:** Always conclude with a brief reminder that Windows optimization is **an iterative process**—Windows Updates, Store updates, and newly installed apps can re-enable features (e.g., `HVCI`), revert services, or add new background updaters—so the user should actively track changes and re-run `win-forge` periodically.
 
 ---
