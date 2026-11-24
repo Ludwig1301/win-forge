@@ -175,3 +175,8 @@ $procs | Where-Object { $_.Name -match $procPattern } | Group-Object Name | ForE
         RamMB   = [math]::Round((($_.Group | Measure-Object WorkingSetSize -Sum).Sum) / 1MB, 1)
     }
 } | Sort-Object RamMB -Descending | Format-Table -AutoSize
+
+Write-Output "=== OPTIONAL / VENDOR STORE APPS ==="
+Get-AppxPackage | Where-Object {
+    $_.Name -match 'Bing|Copilot|StartExperiences|Widgets|Clipchamp|Solitaire|Feedback|GetHelp|Getstarted|Teams|QuickShare|IntelArc|IntelGraphics|PowerAutomate|PCManager|YourPhone|CrossDevice|Xbox|Gaming'
+} | Select-Object Name, Version | Sort-Object Name | Format-Table -AutoSize

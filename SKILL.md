@@ -16,10 +16,10 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 ## Core Execution Rules (Interactive & One-by-One)
 
 1. **Never modify anything during initial discovery; always baseline disk, performance, and driver states first.** Before proposing or executing any changes, run [audit_system.ps1](./scripts/audit_system.ps1), [audit_disk.ps1](./scripts/audit_disk.ps1), and [audit_drivers.ps1](./scripts/audit_drivers.ps1) read-only to record current disk space, CPU/RAM load, power/performance flags, GPU routing, startup state, and pending driver updates.
-2. **Present scannable findings with clear trade-offs.** Never dump dense prose paragraphs alongside a duplicate bottom list. Always format Phase 1 output in 3 compact blocks:
-   - **Health Scoreboard** (5-row summary table: `Storage`, `CPU & RAM`, `Performance Flags`, `GPU Routing`, `Drivers & BIOS`, with `🟢 Healthy` / `🟡 Review` / `🔴 Action Needed` tags).
-   - **Storage Snapshot** (a clean table with `Folder / Cache`, `Size`, and `Notes`—never an inline run-on line).
-   - **Merged Numbered Action Table** (`#`, `Item`, `Size / RAM`, `What It Does`, `If Disabled / Removed`, `Tag` — `🟢 Safe` / `🟡 Conditional` / `🎮 Gaming`), followed by short grouped bullets under **Already Clean / Protected** (one bullet per category: `Known Folders`, `Startups`, `Services`, `Hardware`—never a single semicolon-joined line) and `"Reply with the numbers to run (e.g., 1, 2)"`.
+2. **Present scannable findings with clear trade-offs.** Never dump dense prose paragraphs alongside a duplicate bottom list. Always organize Phase 1 output under these exact 3 numbered sections:
+   - **1. System, Performance & Display State** — compact summary table (`OS & Power`, `CPU & RAM`, `Performance Flags`, `GPU Routing`, `SSD Health` with `🟢 Healthy` / `🟡 Review` / `🔴 Action Needed` tags).
+   - **2. Storage & Caches** — clean `Storage Snapshot` table (`Folder / Cache`, `Size`, `Notes`—never an inline run-on line).
+   - **3. Startups, Services, Apps & Drivers** — brief **Drivers & BIOS** status, a **Merged Numbered Action Table** (`#`, `Item`, `Size / RAM`, `What It Does`, `If Disabled / Removed`, `Tag` — `🟢 Safe` / `🟡 Conditional` / `🎮 Gaming`), **Already Clean / Protected** formatted as **nested bullets** (category header bullet + indented sub-bullets, never semicolon-separated inline text), and `"Reply with the numbers to run (e.g., 1, 2)"`.
 3. **Wait for user selection.** Let the user choose which numbered items to run.
 4. **Execute one by one with verification.** Run **one approved task at a time**, verify its result (exit code, free space delta, registry/service/process state), report the outcome briefly, then proceed to the next item.
 5. **Handle elevation cleanly.** Check if the shell is elevated (`IsAdmin`). Run user-scoped actions directly; wrap `HKLM`, `Service`, `cleanmgr`, `powercfg`, or driver installs in an elevated script (`Start-Process powershell -Verb RunAs -Wait`) that logs to a transcript so output is captured. If `-Verb RunAs` fails or is unsupported in the current environment (`InvalidOperationException` / non-interactive runner), do not attempt to bypass elevation—save a self-contained `.ps1` script to scratch/temp, verify `IsAdmin` inside it, and give the user the exact one-line command to run from an Administrator PowerShell (`Win + X → Terminal (Admin)`).
@@ -88,3 +88,9 @@ Use the exact verified commands and OS-specific branches in [playbooks.md](./ref
 
 1. **Final Post-Action Re-Scan:** After all approved tasks finish, run [audit_system.ps1](./scripts/audit_system.ps1) and [audit_disk.ps1](./scripts/audit_disk.ps1) (plus [audit_drivers.ps1](./scripts/audit_drivers.ps1) if drivers were updated) **one last time** and summarize the before-vs-after delta (free disk space gained, RAM/process count change, remaining startups, and any reverted/protected settings).
 2. **Iterative-Process Notice:** Always conclude with a brief reminder that Windows optimization is **an iterative process**—Windows Updates, Store updates, and newly installed apps can re-enable features (e.g., `HVCI`), revert services, or add new background updaters—so the user should actively track changes and re-run `win-forge` periodically.
+
+---
+
+## Contributing & Contact
+
+If you want to contribute or share feedback, don't hesitate—open an issue or PR, or reach out to me on X: [@omerokumusx](https://x.com/omerokumusx) and [@omerokumusx_tr](https://x.com/omerokumusx_tr).
