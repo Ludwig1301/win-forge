@@ -1,8 +1,14 @@
 # win-forge
 
+> *"Hello, friend! I built this skill to help you clean up your PC and get the most out of your hardware—safely and on your own terms."*
+
 An interactive, verification-first **Windows 10 & Windows 11** system audit, cleanup, de-bloating, optimization, and driver management skill for Antigravity (`v1`).
 
 > **Philosophy:** Never run blind "all-in-one" scripts that silently break your desktop, updates, or apps. `win-forge` scans read-only first, shows exact live numbers, lets you choose what to change, and executes **one step at a time** with post-action verification.
+>
+> **Why Scripts + an AI Agent:** Traditional Windows cleaners are too deterministic—what's safe to remove depends on your specific hardware and habits. Pairing read-only audit scripts with an AI agent lets `win-forge` read your live setup, explain the trade-offs, and tailor every change to your conditions.
+>
+> **Works in Any Language:** The underlying scripts stay clean in English while the AI agent automatically translates findings, explanations, and interactive choices into whatever language you prompt in (English, Turkish, etc.).
 
 ---
 
@@ -10,7 +16,7 @@ An interactive, verification-first **Windows 10 & Windows 11** system audit, cle
 
 `win-forge` enforces a strict four-phase, **iterative** workflow:
 
-1. **Phase 1 — Read-Only Discovery (Mandatory Baseline):** Runs non-destructive PowerShell audits (`audit_system.ps1`, `audit_disk.ps1`, and `audit_drivers.ps1`) to capture baseline disk space, CPU/RAM load, performance flags (`HAGS`, `HVCI`, `TRIM`), GPU routing, 5-layer startups, Known Folders, targeted + general background processes, and pending driver updates. Nothing is modified.
+1. **Phase 1 — Read-Only Discovery (Plan + Mandatory Baseline):** Outlines a structured analysis plan first, then runs non-destructive PowerShell audits (`audit_system.ps1`, `audit_disk.ps1`, and `audit_drivers.ps1`) to capture baseline disk space, large files, caches, bloatware, CPU/RAM load, performance flags (`HAGS`, `HVCI`, `TRIM`), GPU routing, 5-layer startups, Known Folders, targeted + general background processes, and pending driver updates. Nothing is modified until you decide.
 2. **Phase 2 — User Selection (With Clear Trade-Offs):** Presents numbered findings where **every** flagged process, service, task, or app includes a brief **1-line summary of what it does and what happens if removed/disabled**, so you decide exactly what to keep, disable, move, or clean.
 3. **Phase 3 — One-by-One Execution & Verification:** Runs one approved task at a time (elevating cleanly via transcript-logged UAC sessions, or providing an `IsAdmin`-guarded script when the host runner cannot elevate), verifies the new state (free space delta, registry value, service status, or driver version), and reports back before moving on.
 4. **Phase 4 — Final Re-Scan & Iterative Tracking:** Re-runs the read-only audit scripts at the end to report a verified **before-vs-after delta**, and reminds you that Windows optimization is **iterative**—OS/Store updates and new installs can re-enable features or add new background tasks over time, so periodic re-runs keep your machine dialed in.
@@ -115,3 +121,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\audit_drivers.ps1
 
 ## Roadmap
 See [future_development.md](./future_development.md) for the **v2+** plan expanding all **9 modules** (including **App Manager**, **System Repair** (`DISM`/`sfc`/`chkdsk`/`lodctr`), deeper **Debloat**, WSL2/Docker `vhdx` compaction, and OEM driver automation).
+
+---
+
+## Contributing & Contact
+If you want to contribute or share feedback, don't hesitate—open an issue or PR, or reach out to me on X: [@omerokumusx](https://x.com/omerokumusx) and [@omerokumusx_tr](https://x.com/omerokumusx_tr).

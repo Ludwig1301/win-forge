@@ -11,6 +11,8 @@ description: >-
 
 An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup skill.
 
+> **Opening Greeting (translate into the user's language at the start of a session):** *"Hello, friend! I built this skill to help you clean up your PC and get the most out of your hardware—safely and on your own terms."*
+
 ## Core Execution Rules (Interactive & One-by-One)
 
 1. **Never modify anything during initial discovery; always baseline disk, performance, and driver states first.** Before proposing or executing any changes, run [audit_system.ps1](./scripts/audit_system.ps1), [audit_disk.ps1](./scripts/audit_disk.ps1), and [audit_drivers.ps1](./scripts/audit_drivers.ps1) read-only to record current disk space, CPU/RAM load, power/performance flags, GPU routing, startup state, and pending driver updates.
@@ -18,12 +20,19 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 3. **Wait for user selection.** Let the user choose which numbered items to run.
 4. **Execute one by one with verification.** Run **one approved task at a time**, verify its result (exit code, free space delta, registry/service/process state), report the outcome briefly, then proceed to the next item.
 5. **Handle elevation cleanly.** Check if the shell is elevated (`IsAdmin`). Run user-scoped actions directly; wrap `HKLM`, `Service`, `cleanmgr`, `powercfg`, or driver installs in an elevated script (`Start-Process powershell -Verb RunAs -Wait`) that logs to a transcript so output is captured. If `-Verb RunAs` fails or is unsupported in the current environment (`InvalidOperationException` / non-interactive runner), do not attempt to bypass elevation—save a self-contained `.ps1` script to scratch/temp, verify `IsAdmin` inside it, and give the user the exact one-line command to run from an Administrator PowerShell (`Win + X → Terminal (Admin)`).
+6. **Respond in the user's language.** This skill works in any language—automatically match the user's language and translate all audit summaries, 1-line explanations, removal impacts, and prompts naturally, while keeping exact Windows file paths, registry keys, service names, and process names intact for precision.
 
 ---
 
 ## Phase 1: Read-Only Discovery
 
-**Mandatory Pre-Flight Baseline:** Always run **all three** read-only audits before starting any work so disk, performance, and driver-update baselines are captured upfront:
+1. **Compose a Brief Analysis Plan First:** Before executing anything, outline a concise read-only analysis plan covering:
+   - Storage usage, large files, and cleanable caches
+   - Bloatware and unused installed apps
+   - Background processes, CPU, and RAM consumers
+   - All 5 startup layers, services, and scheduled tasks
+   - Performance flags, GPU routing, BIOS age, and pending driver updates
+2. **Execute the Mandatory Pre-Flight Baseline (Zero Changes):** Run **all three** read-only audits to fulfill the plan and present only the analysis results—do not take any action until the user decides what to do:
 
 - **System, Performance State, Processes, Startups & Known Folders:** [audit_system.ps1](./scripts/audit_system.ps1)
 - **Disk Space, Pagefile & Caches (Junction-Safe):** [audit_disk.ps1](./scripts/audit_disk.ps1)
