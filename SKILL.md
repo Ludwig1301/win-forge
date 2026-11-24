@@ -16,7 +16,10 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 ## Core Execution Rules (Interactive & One-by-One)
 
 1. **Never modify anything during initial discovery; always baseline disk, performance, and driver states first.** Before proposing or executing any changes, run [audit_system.ps1](./scripts/audit_system.ps1), [audit_disk.ps1](./scripts/audit_disk.ps1), and [audit_drivers.ps1](./scripts/audit_drivers.ps1) read-only to record current disk space, CPU/RAM load, power/performance flags, GPU routing, startup state, and pending driver updates.
-2. **Present concise findings with clear trade-offs.** Group results clearly (sizes in GB/MB, RAM/CPU/process counts, startup vectors, driver status). For **every** flagged process, service, scheduled task, or app, include a brief **1-line explanation of what it does and what happens if disabled/removed** so the user can decide safely, then offer numbered options.
+2. **Present scannable findings with clear trade-offs.** Never dump dense prose paragraphs alongside a duplicate bottom list. Always format Phase 1 output in 3 compact blocks:
+   - **Health Scoreboard** (5-row summary table: `Storage`, `CPU & RAM`, `Performance Flags`, `GPU Routing`, `Drivers & BIOS`, with `🟢 Healthy` / `🟡 Review` / `🔴 Action Needed` tags).
+   - **Storage Snapshot** (compact free/used summary + top folders and cleanable cache sizes).
+   - **Merged Numbered Action Table** (`#`, `Item`, `Size / RAM`, `What It Does`, `If Disabled / Removed`, `Tag` — `🟢 Safe` / `🟡 Conditional` / `🎮 Gaming`), followed by a single 1-line **Already Clean / Protected** footer and `"Reply with the numbers to run (e.g., 1, 2)"`.
 3. **Wait for user selection.** Let the user choose which numbered items to run.
 4. **Execute one by one with verification.** Run **one approved task at a time**, verify its result (exit code, free space delta, registry/service/process state), report the outcome briefly, then proceed to the next item.
 5. **Handle elevation cleanly.** Check if the shell is elevated (`IsAdmin`). Run user-scoped actions directly; wrap `HKLM`, `Service`, `cleanmgr`, `powercfg`, or driver installs in an elevated script (`Start-Process powershell -Verb RunAs -Wait`) that logs to a transcript so output is captured. If `-Verb RunAs` fails or is unsupported in the current environment (`InvalidOperationException` / non-interactive runner), do not attempt to bypass elevation—save a self-contained `.ps1` script to scratch/temp, verify `IsAdmin` inside it, and give the user the exact one-line command to run from an Administrator PowerShell (`Win + X → Terminal (Admin)`).
@@ -26,13 +29,13 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 
 ## Phase 1: Read-Only Discovery
 
-1. **Compose a Brief Analysis Plan First:** Before executing anything, outline a concise read-only analysis plan covering:
-   - Storage usage, large files, and cleanable caches
-   - Bloatware and unused installed apps
-   - Background processes, CPU, and RAM consumers
-   - All 5 startup layers, services, and scheduled tasks
-   - Performance flags, GPU routing, BIOS age, and pending driver updates
-2. **Execute the Mandatory Pre-Flight Baseline (Zero Changes):** Run **all three** read-only audits to fulfill the plan and present only the analysis results—do not take any action until the user decides what to do:
+1. **Display the Fixed 5-Step Read-Only Analysis Plan (No Plan Designing Needed):** Open with the greeting (translated to the user's language), show this fixed 5-step plan, and immediately execute all three read-only audits without modifying anything:
+   - **Storage, Large Files & Caches:** Measure top-level drive usage (`robocopy /L /XJ`), `pagefile.sys` / `hiberfil.sys`, Recycle Bin, and cleanable dev/browser/system caches (`Temp`, `CrashDumps`, `.nuget`, `pip`, `npm`, `huggingface`, Chrome/Edge).
+   - **Bloatware & Installed Apps:** Inventory optional/vendor Store apps (`Get-AppxPackage`) and safety-critical Known Folders (`Desktop`, `Documents`, `Pictures` OneDrive redirection check).
+   - **Background Processes, CPU & RAM:** Snapshot live CPU load/clock, total process count, top RAM & CPU consumers, and targeted Microsoft/Chrome/vendor/gaming processes.
+   - **All 5 Startup Layers & Services:** Audit `HKCU`/`HKLM`/`WOW6432Node` `Run` (with `StartupApproved` flags), Startup folders, Store startup tasks, non-Windows & telemetry Scheduled Tasks, and 3rd-party `Automatic` services (flagging orphaned binaries and MSIX-protected services).
+   - **Performance Flags, GPU Routing, BIOS & Drivers:** Inspect `HAGS`, `GameMode`, `HVCI`, `DevMode`, SSD health/TRIM, active display-to-GPU routing, BIOS age, PnP device errors, and pending Windows Update drivers.
+2. **Execute the Mandatory Pre-Flight Baseline (Zero Changes):** Run **all three** read-only audits and present only the scannable analysis results—do not take any action until the user decides what to do:
 
 - **System, Performance State, Processes, Startups & Known Folders:** [audit_system.ps1](./scripts/audit_system.ps1)
 - **Disk Space, Pagefile & Caches (Junction-Safe):** [audit_disk.ps1](./scripts/audit_disk.ps1)
