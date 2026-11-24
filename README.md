@@ -8,25 +8,27 @@ An interactive, verification-first **Windows 10 & Windows 11** system audit, cle
 
 ## How It Works
 
-`win-forge` enforces a strict three-phase workflow:
+`win-forge` enforces a strict four-phase, **iterative** workflow:
 
-1. **Phase 1 — Read-Only Discovery:** Runs non-destructive PowerShell audit scripts to inspect your OS build, RAM/processes, 5-layer startups, Known Folders, junction-safe disk usage, caches, and drivers. Nothing is modified.
-2. **Phase 2 — User Selection:** Presents lightweight, numbered findings so you decide exactly what to keep, disable, move, or clean.
-3. **Phase 3 — One-by-One Execution & Verification:** Runs one approved task at a time (elevating cleanly via transcript-logged UAC sessions when needed), verifies the new state (free space delta, registry value, service status, or driver version), and reports back before moving on.
+1. **Phase 1 — Read-Only Discovery (Mandatory Baseline):** Runs non-destructive PowerShell audits (`audit_system.ps1`, `audit_disk.ps1`, and `audit_drivers.ps1`) to capture baseline disk space, CPU/RAM load, performance flags (`HAGS`, `HVCI`, `TRIM`), GPU routing, 5-layer startups, Known Folders, targeted + general background processes, and pending driver updates. Nothing is modified.
+2. **Phase 2 — User Selection (With Clear Trade-Offs):** Presents numbered findings where **every** flagged process, service, task, or app includes a brief **1-line summary of what it does and what happens if removed/disabled**, so you decide exactly what to keep, disable, move, or clean.
+3. **Phase 3 — One-by-One Execution & Verification:** Runs one approved task at a time (elevating cleanly via transcript-logged UAC sessions, or providing an `IsAdmin`-guarded script when the host runner cannot elevate), verifies the new state (free space delta, registry value, service status, or driver version), and reports back before moving on.
+4. **Phase 4 — Final Re-Scan & Iterative Tracking:** Re-runs the read-only audit scripts at the end to report a verified **before-vs-after delta**, and reminds you that Windows optimization is **iterative**—OS/Store updates and new installs can re-enable features or add new background tasks over time, so periodic re-runs keep your machine dialed in.
 
 ---
 
 ## What `v1` Covers
 
-### 1. System, Process & Startup Audit
-- Detects **Windows 10** (`Build < 22000`) vs. **Windows 11** (`Build >= 22000`), uptime, RAM/pagefile, and active power plan.
-- Groups running processes (`Win32_Process`) by app to expose high-RAM background consumers.
+### 1. System, Performance, Process & Startup Audit
+- Detects **Windows 10** (`Build < 22000`) vs. **Windows 11** (`Build >= 22000`), uptime, CPU load/clock, RAM/pagefile, active power plan, SSD health/TRIM, and performance flags (`HAGS`, `GameMode`, `HVCI`, `DevMode`).
+- Checks display-to-GPU routing (`Win32_VideoController`) so monitors aren't accidentally running on integrated graphics when a discrete GPU is installed.
+- Combines **targeted checks** (Microsoft telemetry/Widgets/OneDrive/Edge/Maps/Geolocation/Office polling, Chrome/Google updaters, vendor telemetry, gaming services) with **open-ended discovery** (`Win32_Process` RAM + CPU% grouping) so both known and unfamiliar background apps are surfaced.
 - Audits **all 5 Windows startup layers**—not just `Run` keys:
-  1. `HKCU` & `HKLM` Registry `Run`
+  1. `HKCU`, `HKLM`, and `WOW6432Node` Registry `Run` (with `StartupApproved` status)
   2. User & System `Startup` folders
   3. Store / UWP `AppModel\SystemAppData` startup tasks
-  4. Non-Windows Scheduled Tasks (catching hidden launchers like `\PowerToys\Autorun for <user>`)
-  5. Third-party `Automatic` Windows Services (using locale-invariant path checks safe on `tr-TR` and other non-English locales)
+  4. Non-Windows & Windows Telemetry Scheduled Tasks (catching hidden launchers like `\PowerToys\Autorun for <user>`)
+  5. Third-party `Automatic` Windows Services (flagging orphaned missing binaries and MSIX-protected Store services)
 
 ### 2. Junction-Safe Disk Audit & Cleanup
 - Measures directory sizes using `robocopy /L /XJ` so NTFS junctions never double-count files.
@@ -51,7 +53,8 @@ An interactive, verification-first **Windows 10 & Windows 11** system audit, cle
 - **Windows 11:** Disables Widgets via `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0`.
 - Restarts `explorer.exe` cleanly so changes take effect immediately.
 
-### 6. Dev, Gaming, Power & Locale Checks
+### 6. Dev, Gaming Safety, Power & Locale Checks
+- **Gaming Distinctions:** Never breaks games you actually play—protects `GamingServices`/`Xbox*` if you use PC Game Pass or Microsoft Store games, `GameInputRedistService` for controllers, and anti-cheats (`vgc`, `EasyAntiCheat`, `BattlEye`). At the same time, clearly notes when unused gaming services (e.g., Xbox/Game Pass services if you only play Steam/Epic/Riot) are safe to manualize or remove even for gamers.
 - Audits `HIBERNATEIDLE` AC/DC timeouts and `hiberfil.sys` / Fast Startup trade-offs via `powercfg`.
 - Supports Ultimate Performance power plan activation, Developer Mode, and Windows Defender exclusions for project `Workspace` & IDE directories.
 - Audits Display Language vs. Regional Format (`HKCU:\Control Panel\International`) vs. System Locale before UI language switches.
@@ -90,6 +93,16 @@ Then ask the agent things like:
 - *"Use win-forge to check what's slowing down my PC and taking up disk space."*
 - *"Run win-forge to audit my startup apps and background processes."*
 - *"Check my drivers with win-forge."*
+
+### Using `win-forge` Iteratively (Recommended)
+Windows optimization is an **iterative process**, not a one-time fix. Windows Updates, Microsoft Store updates, and newly installed apps routinely re-enable settings (such as `HVCI` or `StartupBoost`), revert services back to `Automatic`, add new updater tasks, or accumulate gigabytes of new dev/AI caches.
+
+To actively track and maintain your PC over time:
+1. **Run an initial full pass:** Let `win-forge` establish a baseline, choose your optimizations one by one, and review the Phase 4 final re-scan.
+2. **Re-run periodically** (e.g., monthly, after major Windows feature updates, or after installing new IDEs, SDKs, or games):
+   - *"Re-run win-forge to check if anything reverted or crept back into startup."*
+   - *"Run win-forge disk and performance audit to see what's grown since last time."*
+3. **Compare against your previous baseline:** Check free disk space, `pagefile.sys` growth, active `Auto` services, and `HVCI`/`HAGS`/power-plan flags—and note that running your terminal/agent elevated (`IsAdmin: True`) exposes system-wide tasks and multi-user `$Recycle.Bin` usage.
 
 ### Running Audit Scripts Standalone (Read-Only)
 ```powershell

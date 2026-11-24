@@ -160,3 +160,33 @@ if ($sig.Status -ne 'Valid') { throw "Invalid signature: $($sig.Status)" }
 $p = Start-Process -FilePath $installerPath -ArgumentList "-s" -PassThru -Wait
 ```
 Delete the temporary installer after verifying `Win32_VideoController` / `Win32_PnPSignedDriver` reports the updated `DriverVersion` and `Status = OK`.
+
+---
+
+## 8. Process, Service & Gaming Reference (What It Does & Removal Impact)
+
+Use these reference notes alongside open-ended discovery so every option presented to the user explains **what it does** and **what happens if removed/disabled**:
+
+### Microsoft, Chrome & Vendor Targets (Targeted + General Scan)
+| Target | What It Does | Impact If Disabled / Removed |
+| :--- | :--- | :--- |
+| `WidgetService` / `MicrosoftStartFeedProvider` / `msedgewebview2` (Widgets) | Renders Win 11 Taskbar Widgets and MSN news/weather feeds in RAM (~150–250 MB). | Taskbar Widgets board is removed/disabled; desktop and Edge browser are unaffected. |
+| `edgeupdate` / `StartupBoostEnabled` / `BackgroundModeEnabled` | Pre-loads Microsoft Edge at sign-in and polls for Edge updates in the background. | Edge launches slightly slower cold, and updates when opened instead of in the background. |
+| `GoogleUpdater*` / `RunPlatformExperienceHelper_*` | Chrome/Google background auto-update polling and telemetry tasks. | Chrome still updates when opened or via `chrome://settings/help`; stops background polling. |
+| `MapsBroker` / `MapsToastTask` | Downloads and maintains offline maps for the Windows Maps app. | Offline Windows Maps sync stops; online maps in browsers work normally. |
+| `lfsvc` (Geolocation Service) | Provides Wi-Fi/IP approximate location to Windows Store/desktop apps. | Windows Weather/Maps/Find My Device lose automatic location unless re-enabled. |
+| `WSearch` (Windows Search) | Indexes local files for fast Start Menu and File Explorer searches. | Start/Explorer file searches become slower (keep `Auto` unless using a 3rd-party tool like Everything). |
+| `DiagTrack` / `CEIP` (`Consolidator`, `UsbCeip`) / `Compatibility Appraiser` / `SoftLanding*` | Windows telemetry, diagnostics, and feature/promo suggestions. | Stops diagnostic uploads and OS suggestions with no impact on apps or stability. |
+| `Intel Telemetry 3` / `NvTmRep_CrashReport*` / `NvDriverUpdateCheckDaily` | Intel/NVIDIA crash reporting and daily driver update polling. | GPU drivers keep working; you check/update drivers manually when desired. |
+| `Office*` update tasks / `ClickToRunSvc` | Polls for Microsoft 365/Office updates on a schedule. | Set `ClickToRunSvc` to `Manual` and disable polling tasks if you prefer updating Office manually from File → Account. |
+| **Core OS (Never Remove)** | `svchost.exe`, `dwm.exe`, `explorer.exe`, `StartMenuExperienceHost`, `ShellExperienceHost`, `RuntimeBroker`, `TextInputHost`, `WinDefend`, `MDCoreSvc` | Disabling or killing these breaks desktop shell, input, or Windows security. |
+
+### Gaming Distinctions (Never Break What Your Games Use)
+- **Play PC Game Pass / Xbox App / Microsoft Store games → DO NOT REMOVE:**
+  - `GamingServices`, `GamingServicesNet`, `Microsoft.GamingApp`, `XboxService`, `XblAuthManager`, `XblGameSave`, `XboxNetApiSvc`, `Microsoft.XboxIdentityProvider`, `Microsoft.XboxGamingOverlay`. Removing these breaks Game Pass launches, Xbox Live sign-in, and cloud saves.
+- **Play Steam / Epic / Riot / Standalone games only (do NOT use Xbox/Game Pass):**
+  - Even though you play games, unused Xbox/Game Pass items (`XboxService`, `XblGameSaveTask`, Game Bar) are **safe** to set to `Manual` or disable—Steam, CS2, PUBG, and Epic titles do not require them.
+- **Keep for Controllers, Anti-Cheat & Hardware:**
+  - `GameInputRedistService`: Keep if you use gamepads/controllers on Windows.
+  - Anti-cheat services (`vgc` / Riot Vanguard, `EasyAntiCheat`, `BattlEye`): Never disable while playing games that require them.
+  - GPU & peripheral agents (`NVDisplay.ContainerLocalSystem`, `logioptionsplus_agent`, Synapse, iCUE): Keep if you rely on driver overlays, custom mouse/keyboard mappings, or per-game DPI profiles (unless saved to onboard device memory).

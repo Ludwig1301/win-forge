@@ -143,3 +143,35 @@ Get-CimInstance Win32_Service -Filter "StartMode='Auto'" |
         $msix    = if ($_.PathName -match '\\WindowsApps\\') { "Yes" } else { "No" }
         [PSCustomObject]@{ Name = $_.Name; State = $_.State; MissingBinary = $missing; MsixProtected = $msix; DisplayName = $_.DisplayName }
     } | Format-Table -AutoSize -Wrap
+
+Write-Output "=== TARGETED CHECKS (MICROSOFT / CHROME / VENDOR / GAMING) ==="
+$svcTargets = @(
+    @{ Name = 'DiagTrack'; Role = 'MS Telemetry (Safe to disable)' },
+    @{ Name = 'MapsBroker'; Role = 'MS Offline Maps (Safe if unused)' },
+    @{ Name = 'lfsvc'; Role = 'MS Geolocation (Safe if unused)' },
+    @{ Name = 'WSearch'; Role = 'Windows Search Indexer (Keep if using Start/Explorer search)' },
+    @{ Name = 'edgeupdate'; Role = 'Edge Background Updater (Safe to set Manual)' },
+    @{ Name = 'ClickToRunSvc'; Role = 'Office Click-to-Run (Safe to set Manual)' },
+    @{ Name = 'GamingServices'; Role = 'Gaming: Xbox/Game Pass (Keep if playing Game Pass/MS Store games)' },
+    @{ Name = 'GamingServicesNet'; Role = 'Gaming: Xbox/Game Pass Net (Keep if playing Game Pass/MS Store games)' },
+    @{ Name = 'XboxService'; Role = 'Gaming: Xbox Input/App (Keep if Game Pass; safe to Manual if Steam-only)' },
+    @{ Name = 'GameInputRedistService'; Role = 'Gaming: Controller Input (Keep if using gamepads/controllers)' },
+    @{ Name = 'OptionsPlusUpdaterService'; Role = 'Logitech Options+ Updater (Keep if using custom mouse profiles)' }
+)
+$svcCheck = foreach ($t in $svcTargets) {
+    $s = Get-Service -Name $t.Name -ErrorAction SilentlyContinue
+    if ($s) {
+        [PSCustomObject]@{ Service = $s.Name; Status = $s.Status; StartType = $s.StartType; Guidance = $t.Role }
+    }
+}
+$svcCheck | Format-Table -AutoSize -Wrap
+
+Write-Output "-- Targeted Process Presence (Browsers / Widgets / Gaming / Updaters) --"
+$procPattern = '^(chrome|msedge|msedgewebview2|WidgetService|MicrosoftStartFeedProvider|OneDrive|GoogleUpdate|GoogleUpdater|gamingservices|XboxService|GameInputRedistService|vgc|EasyAntiCheat)'
+$procs | Where-Object { $_.Name -match $procPattern } | Group-Object Name | ForEach-Object {
+    [PSCustomObject]@{
+        Process = $_.Name
+        Count   = $_.Count
+        RamMB   = [math]::Round((($_.Group | Measure-Object WorkingSetSize -Sum).Sum) / 1MB, 1)
+    }
+} | Sort-Object RamMB -Descending | Format-Table -AutoSize

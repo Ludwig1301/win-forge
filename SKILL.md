@@ -14,7 +14,7 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 ## Core Execution Rules (Interactive & One-by-One)
 
 1. **Never modify anything during initial discovery; always baseline disk, performance, and driver states first.** Before proposing or executing any changes, run [audit_system.ps1](./scripts/audit_system.ps1), [audit_disk.ps1](./scripts/audit_disk.ps1), and [audit_drivers.ps1](./scripts/audit_drivers.ps1) read-only to record current disk space, CPU/RAM load, power/performance flags, GPU routing, startup state, and pending driver updates.
-2. **Present concise findings first.** Group results clearly (sizes in GB/MB, RAM/process counts, startup vectors, driver status) and offer numbered options.
+2. **Present concise findings with clear trade-offs.** Group results clearly (sizes in GB/MB, RAM/CPU/process counts, startup vectors, driver status). For **every** flagged process, service, scheduled task, or app, include a brief **1-line explanation of what it does and what happens if disabled/removed** so the user can decide safely, then offer numbered options.
 3. **Wait for user selection.** Let the user choose which numbered items to run.
 4. **Execute one by one with verification.** Run **one approved task at a time**, verify its result (exit code, free space delta, registry/service/process state), report the outcome briefly, then proceed to the next item.
 5. **Handle elevation cleanly.** Check if the shell is elevated (`IsAdmin`). Run user-scoped actions directly; wrap `HKLM`, `Service`, `cleanmgr`, `powercfg`, or driver installs in an elevated script (`Start-Process powershell -Verb RunAs -Wait`) that logs to a transcript so output is captured. If `-Verb RunAs` fails or is unsupported in the current environment (`InvalidOperationException` / non-interactive runner), do not attempt to bypass elevation—save a self-contained `.ps1` script to scratch/temp, verify `IsAdmin` inside it, and give the user the exact one-line command to run from an Administrator PowerShell (`Win + X → Terminal (Admin)`).
@@ -29,7 +29,7 @@ An interactive, step-by-step Windows 10 & Windows 11 optimization and cleanup sk
 - **Disk Space, Pagefile & Caches (Junction-Safe):** [audit_disk.ps1](./scripts/audit_disk.ps1)
 - **Installed Drivers, BIOS Age, Device Errors & Windows Update Drivers:** [audit_drivers.ps1](./scripts/audit_drivers.ps1)
 
-Before recommending any action, verify the OS version (`Build >= 22000` = Windows 11, `< 22000` = Windows 10) and flag any safety risks (e.g., OneDrive Known Folder Move active, or Windows Update actively locking `SoftwareDistribution\Download`). Note that running Phase 1 elevated (`IsAdmin: True`) also reveals system-wide Scheduled Tasks (e.g. `\Intel\*`, `\GoogleSystem\*`) and multi-SID `$Recycle.Bin` usage hidden from non-admin scans.
+Before recommending any action, verify the OS version (`Build >= 22000` = Windows 11, `< 22000` = Windows 10) and flag any safety risks (e.g., OneDrive Known Folder Move active, or Windows Update actively locking `SoftwareDistribution\Download`). Combine **targeted checks** for known bloat/updaters (Microsoft telemetry/Widgets/OneDrive/Edge/Maps/Geolocation/Office polling, Chrome/Google updaters, Intel/NVIDIA telemetry/updaters, gaming services) with **open-ended discovery** across all running processes, 5 startup layers, and installed apps so unknown bloat is never missed. Note that running Phase 1 elevated (`IsAdmin: True`) also reveals system-wide Scheduled Tasks (e.g. `\Intel\*`, `\GoogleSystem\*`) and multi-SID `$Recycle.Bin` usage hidden from non-admin scans.
 
 ---
 
@@ -62,10 +62,17 @@ Use the exact verified commands and OS-specific branches in [playbooks.md](./ref
 
 5. **Dev, Gaming, Power & Locale Checks**
    - **Power & Hibernation:** Check `powercfg /query SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE` (AC vs. DC timeouts) and `hiberfil.sys` / Fast Startup trade-offs; activate Ultimate Performance (`powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61`) if requested.
-   - **Dev & Gaming:** Add Windows Defender exclusions for project `Workspace` and IDE paths; enable Developer Mode; check external display GPU routing when gaming.
+   - **Dev & Gaming Safety Distinctions:** Add Windows Defender exclusions for project `Workspace` and IDE paths; enable Developer Mode; check external display GPU routing when gaming. **Never remove gaming components the user's games depend on** (keep `GamingServices`, `XboxService`, `XblGameSave`, `Microsoft.GamingApp`, `XboxIdentityProvider` for PC Game Pass / Microsoft Store games; keep `GameInputRedistService` for controllers; keep anti-cheats like `vgc`, `EasyAntiCheat`, `BattlEye`; keep GPU/peripheral suites if used). **Conversely, even if the user plays games**, unused gaming services (e.g., Xbox/Game Pass services when the user only plays Steam/Epic/Riot titles) are safe to manualize or remove. Always disclose HVCI (Memory Integrity) security vs. FPS/anti-cheat trade-offs before toggling.
    - **Language & Locale Safety:** Audit `WinSystemLocale`, `WinUserLanguageList`, and `HKCU:\Control Panel\International` (`LocaleName`) before Display Language changes so Regional Format (`d.MM.yyyy`, `,` decimal) and non-Unicode apps don't unexpectedly change.
 
 6. **Driver Audit & Update**
    - Compare `Win32_PnPSignedDriver` versions and `Microsoft.Update.Session` (`IsInstalled=0 and Type='Driver'`) against OEM/vendor releases.
    - Verify `Get-AuthenticodeSignature` (`Status -eq 'Valid'`) on any downloaded installer before running.
    - For Intel Graphics DCH packages (`gfx_win_101*.exe`), use `-s` only (extra flags like `--overwrite`/`--report` can fail with `ExitCode 1007` / `ERROR_BAD_COMMAND`). Delete temporary installers after verification.
+
+---
+
+## Phase 4: Final Re-Scan & Iterative Tracking
+
+1. **Final Post-Action Re-Scan:** After all approved tasks finish, run [audit_system.ps1](./scripts/audit_system.ps1) and [audit_disk.ps1](./scripts/audit_disk.ps1) (plus [audit_drivers.ps1](./scripts/audit_drivers.ps1) if drivers were updated) **one last time** and summarize the before-vs-after delta (free disk space gained, RAM/process count change, remaining startups, and any reverted/protected settings).
+2. **Iterative-Process Notice:** Always conclude with a brief reminder that Windows optimization is **an iterative process**—Windows Updates, Store updates, and newly installed apps can re-enable features (e.g., `HVCI`), revert services, or add new background updaters—so the user should actively track changes and re-run `win-forge` periodically.
