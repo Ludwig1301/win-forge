@@ -38,10 +38,14 @@ try {
     Get-CimInstance Win32_PnPEntity | ForEach-Object {
         foreach ($id in @($_.HardwareID) + @($_.CompatibleID)) { if ($id) { $presentIds[$id.ToUpperInvariant()] = $true } }
     }
+    $nonPresent = @(Get-PnpDevice | Where-Object { -not $_.Present })
     foreach ($u in $res.Updates) {
         $hwid = "$($u.DriverHardwareID)"
         if ($hwid -and -not $presentIds.ContainsKey($hwid.ToUpperInvariant())) {
             Write-Output "- $($u.Title) [NOT PRESENT: $hwid matches no connected device (removed hardware) - do not install]"
+            $nonPresent | Where-Object { (@($_.HardwareID) + @($_.CompatibleID)) -contains $hwid } | ForEach-Object {
+                Write-Output "    Stale device record: $($_.FriendlyName) | InstanceId: $($_.InstanceId)"
+            }
         } else {
             Write-Output "- $($u.Title)"
         }
